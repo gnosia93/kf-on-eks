@@ -270,3 +270,21 @@ kubectl get pods -n <your-ns> -l serving.kserve.io/inferenceservice=llama3-70b -
 # 적용 순서
 # 1) ConfigMap 편집  2) Secret+CSC  3) NodeGroup  4) LocalModelCache(+대기)  5) InferenceService
 ```
+
+# KServe 70B 서빙 — 복잡도 사다리
+
+> 처음부터 Lv.3를 다 할 필요 없음. PoC는 Lv.1, 운영은 Lv.2~3에서 선택.
+
+| 단계 | 하는 일 | 복잡도 | 속도 |
+|---|---|---|---|
+| **Lv.1 그냥 서빙** | ISVC 1개 (`storageUri: s3://`) | ⭐ | 느림 (매번 다운로드) |
+| **Lv.2 공유 PVC** | 모델 1회 복사 + ISVC | ⭐⭐ | 빠름 (캐시 CRD 없음) |
+| **Lv.3 LocalModelCache** | 풀세트 (ConfigMap → Secret/CSC → NodeGroup → Cache → ISVC) | ⭐⭐⭐ | 가장 빠름 + 오토스케일 |
+
+## 고르는 법
+- **PoC / 일단 뜨는지 확인** → Lv.1
+- **운영 · 단순하게** → Lv.2
+- **운영 · 빠른 오토스케일 필수** → Lv.3
+
+## 공통
+1회성 세팅을 끝내면, 모델 추가 시 실제로 만지는 건 **`LocalModelCache` + `InferenceService` 2개뿐**.
