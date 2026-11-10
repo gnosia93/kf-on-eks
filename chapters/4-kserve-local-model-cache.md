@@ -288,3 +288,45 @@ kubectl get pods -n <your-ns> -l serving.kserve.io/inferenceservice=llama3-70b -
 
 ## 공통
 1회성 세팅을 끝내면, 모델 추가 시 실제로 만지는 건 **`LocalModelCache` + `InferenceService` 2개뿐**.
+
+
+# LocalModelCache vs 공유 PVC — 속도 & 트레이드오프
+
+## 왜 보통 LocalModelCache가 빠른가
+- 모델이 **노드 로컬 NVMe**에 있음 → 디스크→GPU 로딩이 **네트워크 홉 없이** 최고 대역폭.
+- scale-up 때 여러 파드가 떠도 **네트워크 스토리지 경합이 없음** (각 노드가 자기 로컬 디스크에서 읽음).
+
+## 단, PVC 속도는 백엔드 나름
+공유 PVC는 뭘로 만드냐에 따라 천차만별:
+
+| PVC 백엔드 | 속도 |
+|---|---|
+| **EFS / NFS** | 느릴 수 있음 (네트워크 FS, 대역폭·지연 불리) |
+| **FSx for Lustre** | 로컬 NVMe에 필적 (병렬 FS, 수 GB/s). + GPUDirect Storage면 더 빠름 |
+
+대략적인 로딩 속도 순서:
+
+```
+로컬 NVMe(LocalModelCache) ≈ FSx Lustre  >  EFS/NFS  ≫  매번 S3 다운로드(Lv.1)
+```
+
+→ 즉 **FSx Lustre로 만든 공유 PVC는 LocalModelCache랑 거의 비슷하게** 빠릅니다. EFS로 만들면 느린 거고요.
+
+## 근데 속도만 보면 안 됨 — 트레이드오프
+
+| 항목 | LocalModelCache | 공유 PVC (RWX) |
+|---|---|---|
+| 로컬 읽기 속도 | **최고** (NVMe) | 백엔드 나름 (Lustre면 최고급) |
+| 디스크 사용 | **노드마다 복사본** (총량↑) | 복사본 1개 공유 (절약) |
+| 배치 유연성 | 낮음 (rigid 노드 핀닝) | **높음** (아무 노드서나 마운트) |
+| 노드 장애 | 약함 (PV가 노드에 묶임) | **강함** (데이터 노드 독립) |
+| 멀티노드 서빙 | ❌ (노드 로컬이라 불가) | ✅ **필수** |
+| 동시 콜드스타트 | 경합 없음 | 많은 파드가 같은 볼륨 읽으면 **대역 병목** 가능 |
+
+## 결론
+- **단일노드 + 극한 속도/오토스케일** → LocalModelCache (70B · TP=4 케이스에 딱).
+- **멀티노드거나, 운영 단순·유연성 중시** → **FSx Lustre PVC**가 실전에서 아주 좋은 균형. 속도도 거의 안 밀림.
+- **EFS/NFS PVC** = "S3보다야 낫지만 가장 빠른 건 아니다" 정도.
+
+> 표의 "Lv.3가 가장 빠름"은 **로컬 NVMe 기준**. FSx Lustre로 Lv.2를 하면 **Lv.3에 거의 근접**.
+> 속도 차이보다 **"노드 핀닝 vs 유연성", "단일노드 vs 멀티노드"** 가 실제 선택 기준이 되는 경우가 많음.
