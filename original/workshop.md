@@ -656,7 +656,6 @@ row = {
     "answers": ["월 1일"]   # 답이 없는 부정 샘플일 경우 빈 리스트 []
 }
 """
-
 def encode(tok, row):
     # Same chat template as inference: thinking disabled, answer followed by <|im_end|>.
     prompt = tok.apply_chat_template(build_messages(row["question"], row["contexts"]),
@@ -666,6 +665,21 @@ def encode(tok, row):
     if len(prompt_ids) + len(answer_ids) > CFG["max_len"]:
         return None
     return {"input_ids": prompt_ids + answer_ids, "labels": [-100] * len(prompt_ids) + answer_ids}
+
+
+"""
+[input_ids]      (빈칸은 pad_id로 채움)
+[ [10, 20, 30, 40, 50],
+  [11, 22, 33, pad, pad] ]
+
+[attention_mask] (글자 있는 곳은 1, 패딩 빈칸은 0)
+[ [ 1,  1,  1,  1,  1],
+  [ 1,  1,  1,  0,  0] ]
+
+[labels]         (패딩 빈칸은 -100으로 유지해 오차 계산 제외)
+[ [-100, -100, -100, 40, 50],
+  [-100, -100,   33, -100, -100] ]
+"""
 
 def collate(batch, pad_id):
     width = max(len(x["input_ids"]) for x in batch)
