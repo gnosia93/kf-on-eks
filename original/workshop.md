@@ -721,6 +721,7 @@ def main():
     rows = read_jsonl(f"{prefix}/data/train.jsonl")
     data = [e for e in (encode(tok, r) for r in rows) if e is not None]
 
+    # device_map은 거대한 모델을 여러 장치(GPU 0, GPU 1, CPU 등)에 쪼개어 배치하기 위해 {"모듈_이름": 장치_번호} 형태로 작성하는 지도(Map).
     model = AutoModelForCausalLM.from_pretrained(CFG["base_model"], dtype=torch.bfloat16,
                                                  device_map={"": local_rank})
     model.config.use_cache = False
