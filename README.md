@@ -1,4 +1,4 @@
-# kf-on-eks (AI Engineering Solutions Workshop)
+# kf-on-eks (AI Engineering Workshop)
 
 ![](https://github.com/gnosia93/kf-on-eks/blob/main/llmops.jpg)
 
