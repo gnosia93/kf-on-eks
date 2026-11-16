@@ -942,6 +942,7 @@ def prepare_data(bucket: str, region: str, mlflow_uri: str, experiment: str, bas
     rnd = random.Random(42)
     ds = load_dataset("rajpurkar/squad_v2")
 
+    # split 는 "train"이나 "validation" 같은 짧은 문자열(키 이름)이 넘어온다.  
     def unique_contexts(split):
         seen = {}
         for title, ctx in zip(ds[split]["title"], ds[split]["context"]):
