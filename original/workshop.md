@@ -780,6 +780,8 @@ def main():
             opt.zero_grad(set_to_none=True)
             step += 1
 
+            # loss.backward()가 실행될 때 동기화되는 것은 loss 값 자체가 아니라, 모델 가중치(파라미터)들의 수정 방향인 '기울기(.grad)'뿐이다.
+            # loss 텐서 안에 들어있는 숫자(0.3631)는 backward()가 끝난 뒤에도 여전히 각 GPU마다 서로 다른 값으로 남아 있다.
             stats = torch.cat([run_loss, run_tokens])
             dist.all_reduce(stats)
             if rank == 0:
