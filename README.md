@@ -7,4 +7,4 @@
 
 
 
-[Lab 4. 파이프라인: 데이터 → 학습 → 평가 → 배포 판단 (50분)](https://github.com/gnosia93/kf-on-eks/blob/main/labs/4-pipeline.md)
+* [Lab 4. 파이프라인: 데이터 → 학습 → 평가 → 배포 판단 (50분)](https://github.com/gnosia93/kf-on-eks/blob/main/labs/4-pipeline.md)
