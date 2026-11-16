@@ -811,6 +811,17 @@ if __name__ == "__main__":
         raise
 ```
 
+* TIP 
+```
+import inspect
+
+# 원본 모델의 forward 함수가 받는 모든 파라미터 이름 출력
+print(inspect.signature(model.forward))
+```
+
+
+
+
 ### 3-3. 코드를 ConfigMap으로 배포
 
 TrainJob과 RAG 앱은 `llm` 네임스페이스에서, KFP 평가 단계는 `kubeflow` 네임스페이스에서 이 코드를 마운트합니다. 코드를 고칠 때마다 다시 실행하세요.
