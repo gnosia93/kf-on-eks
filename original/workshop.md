@@ -645,6 +645,18 @@ def upload_dir(local_dir, uri):
     for name in os.listdir(local_dir):
         s3.upload_file(os.path.join(local_dir, name), bucket, f"{prefix.rstrip('/')}/{name}")
 
+
+"""
+row = {
+    "question": "입사 1년 미만 직원의 연차는 며칠인가요?",
+    "contexts": [
+        "입사 1년 미만 근로자는 1개월 개근 시 1일의 유급휴가가 발생합니다.",
+        "연차 유급휴가는 발생일로부터 1년간 사용할 수 있습니다."
+    ],
+    "answers": ["월 1일"]   # 답이 없는 부정 샘플일 경우 빈 리스트 []
+}
+"""
+
 def encode(tok, row):
     # Same chat template as inference: thinking disabled, answer followed by <|im_end|>.
     prompt = tok.apply_chat_template(build_messages(row["question"], row["contexts"]),
