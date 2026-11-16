@@ -668,6 +668,8 @@ def encode(tok, row):
 
 
 """
+collate 결과
+
 [input_ids]      (빈칸은 pad_id로 채움)
 [ [10, 20, 30, 40, 50],
   [11, 22, 33, pad, pad] ]
@@ -679,8 +681,22 @@ def encode(tok, row):
 [labels]         (패딩 빈칸은 -100으로 유지해 오차 계산 제외)
 [ [-100, -100, -100, 40, 50],
   [-100, -100,   33, -100, -100] ]
-"""
 
+
+배치 크기가 2인 경우 예시
+batch = [
+    # 0번째 데이터 (encode 함수의 반환값 1건)
+    {
+        "input_ids": [151644, 8948, 198, ..., 151645],
+        "labels":    [-100,   -100, -100, ..., 151645]
+    },
+    # 1번째 데이터 (encode 함수의 반환값 1건)
+    {
+        "input_ids": [151644, 8948, 198, ..., 151645],
+        "labels":    [-100,   -100, -100, ..., 151645]
+    }
+]
+"""
 def collate(batch, pad_id):
     width = max(len(x["input_ids"]) for x in batch)
     ids = torch.full((len(batch), width), pad_id, dtype=torch.long)
