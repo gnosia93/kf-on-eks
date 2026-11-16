@@ -29,7 +29,7 @@
 * 학습률 (learning_rate): LoRA 기준 1e-4 ~ 2e-4 (전체 파인튜닝은 1e-5 ~ 2e-5)
 * 에폭 (epochs): 데이터 중복 암기(과적합)를 막기 위해 보통 1 ~ 3 에폭만 진행
 * 배치 크기 (Effective Batch Size): grad_accum을 조합해 16 ~ 64 수준으로 고정
-* 
+ 
 이 표준 범위를 벗어나면 성능이 미세하게 오르기보다 오히려 기존 지식을 까먹거나(Catastrophic Forgetting) 헛소리를 하는 현상이 생기기 때문에 표준값을 그대로 쓰는 것이 안전합니다.
 
 ### 3. 평가(Evaluation) 자체가 매우 까다롭다 ###
