@@ -2,6 +2,8 @@
 
 ### 1. Mermaid 아키텍처 다이어그램 ###
 
+![](https://github.com/gnosia93/kf-on-eks/blob/main/insurance-terms-chatbot/insurance%20policy%20chatbot%20.jpg)
+
 ```mermaid
 flowchart TB
     %% 사용자 영역
