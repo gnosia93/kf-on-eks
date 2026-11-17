@@ -2,7 +2,7 @@
 
 ### 1. Mermaid 아키텍처 다이어그램 ###
 
-```
+```mermaid
 flowchart TB
     %% 사용자 영역
     subgraph Users["1. 사용자 접점 (Client)"]
