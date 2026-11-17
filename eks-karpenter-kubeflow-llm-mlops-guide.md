@@ -561,10 +561,3 @@ curl -X POST http://localhost:8000/v1/completions \
   }'
 ```
 
----
-
-## 6. 실무 운영 체크리스트 (Solutions Architect 관점)
-
-* **Spot 인스턴스 중단 대응 (학습 안정성):** `g5` 스팟 인스턴스를 사용할 때는 `TrainingArguments`에 `save_strategy="steps"`, `save_steps=50`, `save_total_limit=2`를 설정하고 체크포인트 경로를 **Amazon EFS**나 **S3**에 연결해 두면, 스팟 회수 시에도 처음부터 다시 학습하지 않고 이어서 학습(Resume)할 수 있습니다.
-* **새 모델 무중단 롤아웃 (Zero-Downtime Update):** Kubeflow 파이프라인의 마지막 단계에 `kubectl rollout restart deployment/vllm-summarization-server` 명령을 실행하는 경량 스텝을 추가하면, `@Production` 모델이 승격되자마자 vLLM 서버가 새 모델을 내려받아 무중단 교체 배포됩니다.
-* **IAM 권한 (IRSA / Pod Identity):** 학습 파드와 vLLM 파드가 S3 버킷에 모델 가중치를 읽고 쓸 수 있도록 EKS ServiceAccount에 **AmazonS3FullAccess(또는 해당 버킷 Read/Write 권한)**를 IRSA 또는 EKS Pod Identity로 반드시 연결해야 합니다.
