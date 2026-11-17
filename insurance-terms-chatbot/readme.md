@@ -144,3 +144,4 @@ GPU 메모리를 효율적으로 사용하면서 두 사용자층(고객 vs 직�
 ## 레퍼런스 ##
 
 * [Reranker란 무엇인가 — Bi-encoder vs Cross-encoder](https://cross-the-line.tistory.com/130) 
+* [Reciprocal Rank Fusion, 상호 순위 융합](https://daleseo.com/hybrid-search-rrf/)
