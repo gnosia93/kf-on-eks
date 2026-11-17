@@ -139,7 +139,8 @@ GPU 메모리를 효율적으로 사용하면서 두 사용자층(고객 vs 직�
 
 ### * 약관 PDF의 표와 조항을 깨지지 않게 파싱·청킹하는 파이프라인 ###
 ### [고객용/직원용 듀얼 LoRA 학습 데이터셋 구축 방법](https://github.com/gnosia93/kf-on-eks/blob/main/insurance-terms-chatbot/lora-dataset.md) ###
-### * 가입 상품/시기별 메타데이터 필터링이 적용된 하이브리드 RAG 코드 ###
+### 가입 상품/시기별 메타데이터 필터링이 적용된 하이브리드 RAG 코드 ###
+### [🚀 보험 약관 RAG 특화 LLM 파인튜닝(Fine-Tuning) 완벽 가이드]() ###
 
 ## 레퍼런스 ##
 
