@@ -1,3 +1,58 @@
+flowchart TB
+    %% 사용자 영역
+    subgraph Users["1. 사용자 접점 (Client)"]
+        U1["일반 고객 앱/웹\n(user_role: customer)"]
+        U2["콜센터 상담원 화면\n(user_role: agent)"]
+    end
+
+    %% 오프라인 학습 및 데이터 파이프라인
+    subgraph Offline["2. 오프라인 데이터 & MLOps 파이프라인 (Kubeflow + S3)"]
+        PDF["보험 약관 PDF\n(조항 + 별표)"] --> PARSE["Docling 파서 & 계층 청커\n(표 헤더 복제 + 메타데이터 태깅)"]
+        PARSE --> EMB["BGE-M3 임베딩 생성"]
+        EMB --> MILVUS[("Milvus Vector DB\n- HNSW 벡터 인덱스\n- INVERTED 인덱스\n(product_code, effective_date)")]
+
+        PARSE --> SYN["합성 Q&A 데이터 생성\n(고객용 / 직원용 페르소나)"]
+        SYN --> KFP["Kubeflow Pipelines\n(QLoRA 학습 -> 평가 -> 승격)"]
+        KFP --> S3[("AWS S3\nserving/CURRENT\n- adapter-customer\n- adapter-agent")]
+    end
+
+    %% 온라인 서빙 파이프라인
+    subgraph Online["3. 온라인 하이브리드 RAG & 서빙 (Kubernetes llm 네임스페이스)"]
+        RAG["FastAPI RAG 서버\n(rag_insurance_milvus.py)"]
+        
+        subgraph HybridSearch["3단 하이브리드 검색기"]
+            S1["1) Milvus 사전 필터링 + Dense 검색\n(상품코드 & 가입시기 격리)"]
+            S2["2) BM25 키워드 검색 + RRF 결합\n(조항번호 · 질병코드 매칭)"]
+            S3["3) Cross-Encoder 리랭커\n(bge-reranker-v2-m3 -> Top-K)"]
+            S1 --> S2 --> S3
+        end
+
+        subgraph VLLM["vLLM 단일 추론 서버 (GPU)"]
+            BASE["Base Model: Qwen-32B"]
+            LORA1["LoRA 1: qwen3-32b-customer\n(쉬운 용어 + 근거 조항)"]
+            LORA2["LoRA 2: qwen3-32b-agent\n(심사 결론 + 개조식 요약)"]
+            BASE --- LORA1
+            BASE --- LORA2
+        end
+
+        MLFLOW[("MLflow Server\nTracing & Evaluation\n(RETRIEVER / LLM Span)")]
+    end
+
+    %% 연결 흐름
+    U1 & U2 -->|"POST /ask\n(질문, 상품코드, 가입일, 역할)"| RAG
+    RAG --> S1
+    MILVUS -.->|"필터링된 약관 청크 반환"| S1
+    S3 -->|"최종 선별 약관 조항 (Top-K)"| RAG
+
+    S3 -.->|"어댑터 자동 동기화\n(Init Container)"| VLLM
+    RAG -->|"customer 요청"| LORA1
+    RAG -->|"agent 요청"| LORA2
+    LORA1 & LORA2 -->|"생성 답변 반환"| RAG
+
+    RAG -.->|"@mlflow.trace\n(입출력 · 지연시간 · 토큰수)"| MLFLOW
+    RAG -->|"최종 답변 + 근거 조항"| U1 & U2
+
+
 
 ```
 [오프라인 파이프라인]
