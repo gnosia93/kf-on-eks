@@ -1649,7 +1649,91 @@ MLflow UI → `qwen3-rag-eval`에서 두 run을 선택하고 **Compare**를 누�
 | **2. RAG 전용 3대 핵심 지표**<br>(Ragas 프레임워크 기준) | • **Faithfulness** (충실성)<br>• **Answer Relevance** (답변 관련성)<br>• **Context Recall** (문맥 재현율) | 정답지(Ground Truth)가 없어도, 모델이 **검색된 문서에 없는 내용을 지어냈는지(환각 여부)**와 **질문 의도에 맞게 답했는지**를 자동으로 판별합니다. |
 | **3. 임베딩 유사도**<br>(Semantic Similarity) | **BERTScore**, **Cosine Similarity** | 정답 문장과 예측 문장을 각각 임베딩 벡터로 변환한 뒤, 벡터 공간에서의 거리(의미적 유사성)를 계산합니다. |
 
+#### 방법 1. MLflow 내장 mlflow.evaluate() 사용 (가장 간편한 표준 방식) ####
 
+```
+import os
+import mlflow
+import pandas as pd
+from mlflow.metrics.genai import faithfulness, answer_similarity
+
+# 1. 심사위원(Judge) LLM 설정 (OpenAI API 또는 클러스터 내부 vLLM 엔드포인트 지정 가능)
+# vLLM을 심사위원으로 쓸 경우: "openai:/qwen3-8b" 형태로 지정하고 OPENAI_API_BASE 환경변수 설정
+judge_model = "openai:/gpt-4o-mini"
+
+# 2. 평가 데이터 준비 (Lab 7의 RAG 서버 호출 결과를 DataFrame으로 정리)
+eval_df = pd.DataFrame([
+    {
+        "inputs": "In what country is Normandy located?",
+        "context": "The Normans were the people who in the 10th and 11th centuries gave their name to Normandy, a region in France.",
+        "outputs": "Normandy is located in France.",  # RAG 모델이 생성한 긴 서술형 답변
+        "ground_truth": "France"                     # 실제 정답
+    },
+    # ... (300개 평가 데이터)
+])
+
+# 3. MLflow Evaluate 실행 (심사위원 LLM이 1~5점 척도로 채점 후 MLflow에 자동 로깅)
+mlflow.set_experiment("qwen3-rag-llm-judge")
+
+with mlflow.start_run(run_name="rag-qwen3-8b-squad"):
+    results = mlflow.evaluate(
+        data=eval_df,
+        predictions="outputs",
+        targets="ground_truth",
+        extra_metrics=[
+            # ① 충실성(Faithfulness): 검색된 context에 없는 내용을 지어냈는지(환각) 평가
+            faithfulness(model=judge_model),
+            # ② 의미적 유사도(Answer Similarity): 단어가 달라도 정답과 의미가 같은지 평가
+            answer_similarity(model=judge_model),
+        ],
+    )
+
+# 4. 평균 점수 출력
+print(results.metrics)
+# 출력 예시: {'faithfulness/v1/mean': 4.85, 'answer_similarity/v1/mean': 4.72}
+```
+
+#### 방법 2. Ragas 라이브러리 연동 방식 (RAG 전용 정밀 평가) ####
+```
+import mlflow
+from datasets import Dataset
+from ragas import evaluate
+from ragas.metrics import (
+    faithfulness,       # 답변이 검색된 문맥에 근거했는가? (환각 방지)
+    answer_relevancy,   # 답변이 질문의 의도에 맞게 대답했는가?
+    context_recall,     # 검색기가 정답에 필요한 문맥을 빠짐없이 찾아왔는가?
+    context_precision,  # 검색기가 불필요한 쓰레기 문서 없이 핵심 문서를 상위에 올렸는가?
+)
+
+# 1. Ragas 표준 포맷으로 데이터셋 구성
+ragas_data = {
+    "question": ["In what country is Normandy located?"],
+    "answer": ["Normandy is a region located in northern France."],
+    "contexts": [["The Normans were the people who gave their name to Normandy, a region in France."]],
+    "ground_truth": ["France"]
+}
+dataset = Dataset.from_dict(ragas_data)
+
+# 2. Ragas 평가 실행 (기본적으로 OPENAI_API_KEY의 gpt-4o-mini 등을 Judge로 사용)
+score = evaluate(
+    dataset=dataset,
+    metrics=[faithfulness, answer_relevancy, context_recall, context_precision],
+)
+
+# 3. 계산된 점수를 MLflow에 기록
+mlflow.set_experiment("qwen3-ragas-eval")
+with mlflow.start_run(run_name="ragas-qwen3-8b-squad"):
+    # score.to_pandas()에서 각 지표의 평균값을 뽑아 MLflow 메트릭으로 저장
+    df_scores = score.to_pandas()
+    metrics_dict = {
+        "faithfulness": float(df_scores["faithfulness"].mean()),
+        "answer_relevancy": float(df_scores["answer_relevancy"].mean()),
+        "context_recall": float(df_scores["context_recall"].mean()),
+        "context_precision": float(df_scores["context_precision"].mean()),
+    }
+    mlflow.log_metrics(metrics_dict)
+    print(metrics_dict)
+```
 
 ---
 
