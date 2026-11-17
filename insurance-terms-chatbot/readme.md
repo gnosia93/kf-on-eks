@@ -1,4 +1,24 @@
 
+```
+[오프라인 파이프라인]
+  보험 약관 PDF ──▶ Docling 파싱/청킹 ──▶ Milvus 적재 (product_code, effective_date 인덱싱)
+                         │
+                         ▼
+                  합성 Q&A 생성 ──▶ KFP QLoRA 학습/승격 ──▶ S3 (customer / agent 어댑터)
+                                                                │ (파드 시작 시 동기화)
+[온라인 추론 파이프라인]                                        ▼
+  고객 / 상담원 ──▶ FastAPI RAG 서버 ──▶ [1] Milvus 사전필터링 + Vector 검색
+                          │             [2] BM25 키워드 결합 (RRF)
+                          │             [3] Cross-Encoder 리랭커 (Top-K)
+                          ▼
+                    vLLM (Qwen-32B) ──▶ customer 어댑터 (쉬운 설명 + 근거 조항)
+                          │         └──▶ agent 어댑터 (심사 결론 + 개조식 요약)
+                          ▼
+                    MLflow Tracing (검색 문서, 프롬프트, 토큰 수 전 과정 기록)
+```
+
+
+
 ## Qwen-32B 기반 보험 약관 챗봇 구축 아키텍처 (일반 고객용 & 콜센터 직원용) ##
 
 단일 `Qwen-32B` 서빙 서버 위에 **Multi-LoRA(다중 어댑터)**와 **하이브리드 RAG** 구조를 결합하여, 일반 고객용 챗봇과 내부 콜센터 직원용 어시스턴트를 동시에 구축하는 실무 로드맵입니다.
